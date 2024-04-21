@@ -28,7 +28,7 @@ app.get('/api/jonell', async (req, res) => {
 
         const uploadUrl = await getUploadUrl(instance);
         const videoInfo = await getVideoInfo(videoUrl);
-        const outputPath = path.join(__dirname, `${videoInfo.title}.mp3`);
+        const outputPath = path.join(__dirname, `${videoInfo.title}.m4a`);
 
         await downloadFile(videoUrl, outputPath);
 
@@ -39,7 +39,7 @@ app.get('/api/jonell', async (req, res) => {
         const jsonResponse = {
             Successfully: {
                 url: finalUrl,
-                src: `${videoInfo.title}.mp3`,
+                src: `${videoInfo.title}.m4a`,
                 title: videoInfo.title,
                 ytLink: videoUrl,
                 status: 'Success'
@@ -102,7 +102,7 @@ async function getVideoInfo(url) {
 }
 
 async function downloadFile(url, outputPath) {
-    const response = await axios.get(`https://deku-rest-api.replit.app/ytdl?url=${encodeURIComponent(url)}&type=mp3`, {
+    const response = await axios.get(`https://deku-rest-api.replit.app/ytdl?url=${encodeURIComponent(url)}&type=mp4`, {
         responseType: 'arraybuffer',
     });
 
