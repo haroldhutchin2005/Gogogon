@@ -7,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -28,7 +28,7 @@ app.get('/api/jonell', async (req, res) => {
 
         const uploadUrl = await getUploadUrl(instance);
         const videoTitle = await getVideoTitle(videoUrl);
-        const outputPath = path.join(__dirname, `${videoTitle}.m4a`);
+        const outputPath = path.join(__dirname, `${videoTitle}.mp3`);
 
         await downloadFile(videoUrl, outputPath);
 
@@ -39,7 +39,7 @@ app.get('/api/jonell', async (req, res) => {
         const jsonResponse = {
             Successfully: {
                 url: finalUrl,
-                src: `${videoTitle}.m4a`,
+                src: `${videoTitle}.mp3`,
                 title: videoTitle,
                 ytLink: videoUrl,
                 status: 'Success'
@@ -101,8 +101,8 @@ async function getVideoTitle(url) {
 
 async function downloadFile(url, outputPath) {
     return new Promise((resolve, reject) => {
-        ytdl(url, { format: 'audioonly' })
-            .pipe(fs.createWriteStream(outputPath))
+        const stream = ytdl(url, { filter: 'audioonly', quality: 'highestaudio' });
+        stream.pipe(fs.createWriteStream(outputPath))
             .on('finish', () => resolve(outputPath))
             .on('error', reject);
     });
