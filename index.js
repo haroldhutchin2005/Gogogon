@@ -79,10 +79,12 @@ app.get('/api/jonell', async (req, res) => {
         const { url } = req.query;
         let videoTitle;
         let finalUrl;
+        let filePath;
 
         if (/https:\/\/vt\.tiktok\.com\//.test(url) || /https:\/\/vm\.tiktok\.com\//.test(url) || /https:\/\/www\.tiktok\.com\//.test(url)) {
-            const { filePath, title } = await getTikTokVideo(url);
-            videoTitle = title;
+            const tikTokData = await getTikTokVideo(url);
+            videoTitle = tikTokData.title;
+            filePath = tikTokData.filePath;
         } else {
             videoTitle = await getYoutubeTitle(url);
         }
