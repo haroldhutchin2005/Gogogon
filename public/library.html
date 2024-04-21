@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library - Reupload by GDPH BOT</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f4f4f4;
+            color: #333;
+            font-family: 'Arial', sans-serif;
+            padding: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        .watermark {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(0, 0, 0, 0.5);
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Library</h1>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Status</th>
+                <th>Source</th>
+                <th>Title</th>
+                <th>URL</th>
+            </tr>
+        </thead>
+        <tbody id="videoList">
+            
+        </tbody>
+    </table>
+
+    <div class="watermark">Developed by Jonell Magallanes</div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $.getJSON('/api/library', function(data) {
+                let videoList = '';
+                $.each(data, function(key, value) {
+                    videoList += '<tr>';
+                    videoList += '<td>' + value.status + '</td>';
+                    videoList += '<td>' + value.src + '</td>';
+                    videoList += '<td>' + value.title + '</td>';
+                    videoList += '<td><a href="' + value.url + '">' + value.url + '</a></td>';
+                    videoList += '</tr>';
+                });
+                $('#videoList').html(videoList);
+            }).fail(function(jqXHR, textStatus, errorThrown) {
+                console.log('getJSON request failed! ' + textStatus);
+                console.log('Error thrown: ' + errorThrown);
+            });
+        });
+    </script>
+</body>
+</html>
