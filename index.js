@@ -80,42 +80,28 @@ app.get('/api/jonell', async (req, res) => {
         let videoTitle;
         let finalUrl;
 
-        if (/https:\/\/www\.tiktok\.com\//.test(url) || /https:\/\/vt\.tiktok\.com\//.test(url)) {
+        if (/https:\/\/vt\.tiktok\.com\//.test(url) || /https:\/\/vm\.tiktok\.com\//.test(url) || /https:\/\/www\.tiktok\.com\//.test(url)) {
             const { filePath, title } = await getTikTokVideo(url);
             videoTitle = title;
-            const instance = axios.create({
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                },
-                baseURL: 'https://www.cjoint.com/',
-            });
-
-            const uploadUrl = await getUploadUrl(instance);
-            const outputPath = path.join(__dirname, `${videoTitle}.mp4`);
-
-            fs.renameSync(filePath, outputPath);
-
-            const uploadResponse = await uploadFile(outputPath, uploadUrl, instance);
-            const cjointLink = await getCjointLink(uploadResponse);
-            finalUrl = await getFinalUrl(cjointLink);
         } else {
             videoTitle = await getYoutubeTitle(url);
-            const instance = axios.create({
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                },
-                baseURL: 'https://www.cjoint.com/',
-            });
-
-            const uploadUrl = await getUploadUrl(instance);
-            const outputPath = path.join(__dirname, `${videoTitle}.m4a`);
-
-            await downloadFile(url, outputPath);
-
-            const uploadResponse = await uploadFile(outputPath, uploadUrl, instance);
-            const cjointLink = await getCjointLink(uploadResponse);
-            finalUrl = await getFinalUrl(cjointLink);
         }
+
+        const instance = axios.create({
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            },
+            baseURL: 'https://www.cjoint.com/',
+        });
+
+        const uploadUrl = await getUploadUrl(instance);
+        const outputPath = path.join(__dirname, `${videoTitle}.mp4`);
+
+        fs.renameSync(filePath, outputPath);
+
+        const uploadResponse = await uploadFile(outputPath, uploadUrl, instance);
+        const cjointLink = await getCjointLink(uploadResponse);
+        finalUrl = await getFinalUrl(cjointLink);
 
         const jsonResponse = {
             Successfully: {
