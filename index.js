@@ -1,10 +1,10 @@
 const express = require('express');
 const axios = require('axios');
 const cheerio = require('cheerio');
-const ytdl = require('ytdl-core');
 const FormData = require('form-data');
 const fs = require('fs');
 const path = require('path');
+const ytdl = require('ytdl-core');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -27,8 +27,8 @@ app.get('/api/jonell', async (req, res) => {
         });
 
         const uploadUrl = await getUploadUrl(instance);
-        const videoTitle = await getVideoTitle(videoUrl);
-        const outputPath = path.join(__dirname, `${videoTitle}.mp3`);
+        const videoInfo = await getVideoInfo(videoUrl);
+        const outputPath = path.join(__dirname, `${videoInfo.title}.mp3`);
 
         await downloadFile(videoUrl, outputPath);
 
@@ -39,8 +39,8 @@ app.get('/api/jonell', async (req, res) => {
         const jsonResponse = {
             Successfully: {
                 url: finalUrl,
-                src: `${videoTitle}.mp3`,
-                title: videoTitle,
+                src: `${videoInfo.title}.mp3`,
+                title: videoInfo.title,
                 ytLink: videoUrl,
                 status: 'Success'
             }
@@ -93,19 +93,20 @@ async function getUploadUrl(instance) {
     return $('#form-upload').attr('action');
 }
 
-async function getVideoTitle(url) {
-    const response = await axios.get(url);
-    const $ = cheerio.load(response.data);
-    return $('title').text().replace(' - YouTube', '');
+async function getVideoInfo(url) {
+    const info = await ytdl.getInfo(url);
+    return {
+        title: info.videoDetails.title.replace(/[^\w\s]/gi, ''),
+        lengthSeconds: info.videoDetails.lengthSeconds,
+    };
 }
 
 async function downloadFile(url, outputPath) {
-    return new Promise((resolve, reject) => {
-        const stream = ytdl(url, { filter: 'audioonly', quality: 'highestaudio' });
-        stream.pipe(fs.createWriteStream(outputPath))
-            .on('finish', () => resolve(outputPath))
-            .on('error', reject);
+    const response = await axios.get(`https://deku-rest-api.replit.app/ytdl?url=${encodeURIComponent(url)}&type=mp3`, {
+        responseType: 'arraybuffer',
     });
+
+    fs.writeFileSync(outputPath, Buffer.from(response.data, 'binary'));
 }
 
 async function uploadFile(filePath, uploadUrl, instance) {
@@ -120,13 +121,30 @@ async function uploadFile(filePath, uploadUrl, instance) {
 
 async function getCjointLink(uploadResponse) {
     const $ = cheerio.load(uploadResponse);
-    return $('.share_url a').attr('href');
+    const link = $('.share_url a').attr('href');
+    console.log('Cjoint link:', link);  // Log the extracted cjoint link
+    return link;
 }
 
 async function getFinalUrl(cjointLink) {
-    const htmlResponse = await axios.get(`${cjointLink}`);
-    const html$ = cheerio.load(htmlResponse.data);
-    return `https://www.cjoint.com${html$('.share_url a').attr('href').split('"')[0]}`;
+    const instance = axios.create({
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        },
+        baseURL: cjointLink,
+    });
+
+    try {
+        const htmlResponse = await instance.get('/');
+        const html$ = cheerio.load(htmlResponse.data);
+        const shareUrl = html$('.share_url a').attr('href');
+        console.log('Share URL:', shareUrl);  // Log the extracted share URL
+        const finalUrl = `https://www.cjoint.com${shareUrl.split('"')[0]}`;
+        return finalUrl;
+    } catch (error) {
+        console.error('Error getting final URL:', error);
+        throw error;
+    }
 }
 
 app.listen(PORT, () => {
