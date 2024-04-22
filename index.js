@@ -45,7 +45,8 @@ async function getTikTokVideo(link) {
         }).then(res => res.data);
 
         const cleanTitle = data.title.replace(/[^\w\s]/gi, ''); // Remove symbols from title
-        const fileName = `TikTok-${cleanTitle.replace(/ /g, '-')}-${Date.now()}.m4a`;
+        const sanitizedTitle = cleanTitle.replace(/ /g, ''); // Remove spaces from title
+        const fileName = `TikTok-${sanitizedTitle}-${Date.now()}.m4a`;
         const filePath = path.join(__dirname, fileName);
         const videoFile = fs.createWriteStream(filePath);
 
@@ -57,7 +58,7 @@ async function getTikTokVideo(link) {
                     console.log('Downloaded TikTok video file.');
                     resolve({
                         filePath,
-                        title: cleanTitle
+                        title: sanitizedTitle
                     });
                 });
             });
