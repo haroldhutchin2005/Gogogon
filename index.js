@@ -87,6 +87,9 @@ app.get('/api/jonell', async (req, res) => {
             filePath = tikTokData.filePath;
         } else {
             videoTitle = await getYoutubeTitle(url);
+            const outputPath = path.join(__dirname, `${videoTitle}.mp4`);
+            await downloadFile(url, outputPath);
+            filePath = outputPath;
         }
 
         const instance = axios.create({
@@ -97,11 +100,14 @@ app.get('/api/jonell', async (req, res) => {
         });
 
         const uploadUrl = await getUploadUrl(instance);
-        const outputPath = path.join(__dirname, `${videoTitle}.mp4`);
+        const finalOutputPath = path.join(__dirname, `${videoTitle}.mp4`);
+        
+        // Ensure filePath is defined
+        if (filePath) {
+            fs.renameSync(filePath, finalOutputPath);
+        }
 
-        fs.renameSync(filePath, outputPath);
-
-        const uploadResponse = await uploadFile(outputPath, uploadUrl, instance);
+        const uploadResponse = await uploadFile(finalOutputPath, uploadUrl, instance);
         const cjointLink = await getCjointLink(uploadResponse);
         finalUrl = await getFinalUrl(cjointLink);
 
