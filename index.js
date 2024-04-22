@@ -21,7 +21,7 @@ async function getYoutubeTitle(link) {
         const title = $('meta[property="og:title"]').attr('content');
 
         if (title) {
-            return title.replace(/ /g, ''); // Remove spaces
+            return title;
         } else {
             throw new Error('Title not found');
         }
@@ -32,48 +32,37 @@ async function getYoutubeTitle(link) {
 }
 
 async function getTikTokVideo(link) {
-    try {
-        const response = await axios.post(`https://www.tikwm.com/api/`, {
-            url: link
-        });
+    const response = await axios.post(`https://www.tikwm.com/api/`, {
+        url: link
+    });
 
-        const data = response.data.data;
-        const videoStream = await axios({
-            method: 'get',
-            url: data.play,
-            responseType: 'stream'
-        }).then(res => res.data);
+    const data = response.data.data;
+    const videoStream = await axios({
+        method: 'get',
+        url: data.play,
+        responseType: 'stream'
+    }).then(res => res.data);
 
-        const cleanTitle = data.title.replace(/[^\w\s]/gi, ''); // Remove symbols from title
-        const sanitizedTitle = cleanTitle.replace(/ /g, ''); // Remove spaces from title
-        const fileName = `TikTok-${sanitizedTitle}-${Date.now()}.m4a`;
-        const filePath = path.join(__dirname, fileName);
-        const videoFile = fs.createWriteStream(filePath);
+    const cleanTitle = data.title.replace(/[^\w\s]/gi, ''); // Remove symbols from title
+    const fileName = `TikTok-${cleanTitle}-${Date.now()}.mp4`;
+    const filePath = path.join(__dirname, fileName);
+    const videoFile = fs.createWriteStream(filePath);
 
-        videoStream.pipe(videoFile);
+    videoStream.pipe(videoFile);
 
-        return new Promise((resolve, reject) => {
-            videoFile.on('finish', () => {
-                videoFile.close(() => {
-                    console.log('Downloaded TikTok video file.');
-                    resolve({
-                        filePath,
-                        title: sanitizedTitle
-                    });
+    return new Promise((resolve, reject) => {
+        videoFile.on('finish', () => {
+            videoFile.close(() => {
+                console.log('Downloaded TikTok video file.');
+                resolve({
+                    filePath,
+                    title: cleanTitle
                 });
             });
-
-            videoFile.on('error', reject);
         });
-    } catch (error) {
-        console.error('Error fetching TikTok video:', error);
-        const fileName = `GDPH_BOT_MUSIC_TIKTOK_NOT_FOUND.m4a`;
-        const filePath = path.join(__dirname, fileName);
-        return {
-            filePath,
-            title: 'GDPH_BOT_MUSIC_TIKTOK_NOT_FOUND'
-        };
-    }
+
+        videoFile.on('error', reject);
+    });
 }
 
 const app = express();
@@ -90,42 +79,48 @@ app.get('/api/jonell', async (req, res) => {
         const { url } = req.query;
         let videoTitle;
         let finalUrl;
-        let filePath;
 
-        if (/https:\/\/vt\.tiktok\.com\//.test(url) || /https:\/\/vm\.tiktok\.com\//.test(url) || /https:\/\/www\.tiktok\.com\//.test(url)) {
-            const tikTokData = await getTikTokVideo(url);
-            videoTitle = tikTokData.title;
-            filePath = tikTokData.filePath;
+        if (/https:\/\/www\.tiktok\.com\//.test(url) || /https:\/\/vt\.tiktok\.com\//.test(url)) {
+            const { filePath, title } = await getTikTokVideo(url);
+            videoTitle = title;
+            const instance = axios.create({
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                },
+                baseURL: 'https://www.cjoint.com/',
+            });
+
+            const uploadUrl = await getUploadUrl(instance);
+            const outputPath = path.join(__dirname, `${videoTitle}.mp4`);
+
+            fs.renameSync(filePath, outputPath);
+
+            const uploadResponse = await uploadFile(outputPath, uploadUrl, instance);
+            const cjointLink = await getCjointLink(uploadResponse);
+            finalUrl = await getFinalUrl(cjointLink);
         } else {
             videoTitle = await getYoutubeTitle(url);
+            const instance = axios.create({
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                },
+                baseURL: 'https://www.cjoint.com/',
+            });
+
+            const uploadUrl = await getUploadUrl(instance);
             const outputPath = path.join(__dirname, `${videoTitle}.m4a`);
+
             await downloadFile(url, outputPath);
-            filePath = outputPath;
+
+            const uploadResponse = await uploadFile(outputPath, uploadUrl, instance);
+            const cjointLink = await getCjointLink(uploadResponse);
+            finalUrl = await getFinalUrl(cjointLink);
         }
-
-        const instance = axios.create({
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            },
-            baseURL: 'https://www.cjoint.com/',
-        });
-
-        const uploadUrl = await getUploadUrl(instance);
-        const finalOutputPath = path.join(__dirname, `${videoTitle}.m4a`);
-        
-        // Ensure filePath is defined
-        if (filePath) {
-            fs.renameSync(filePath, finalOutputPath);
-        }
-
-        const uploadResponse = await uploadFile(finalOutputPath, uploadUrl, instance);
-        const cjointLink = await getCjointLink(uploadResponse);
-        finalUrl = await getFinalUrl(cjointLink);
 
         const jsonResponse = {
             Successfully: {
                 url: finalUrl,
-                src: `${videoTitle}.m4a`,
+                src: `${videoTitle}.mp4`,
                 title: videoTitle,
                 ytLink: url,
                 status: 'Success'
@@ -173,7 +168,7 @@ async function getUploadUrl(instance) {
 }
 
 async function downloadFile(url, outputPath) {
-    const response = await axios.get(`https://ytdlbyjonell-0c2a4d00cfcc.herokuapp.com/yt?url=${encodeURIComponent(url)}&type=m4a`, {
+    const response = await axios.get(`https://ytdlbyjonell-0c2a4d00cfcc.herokuapp.com/yt?url=${encodeURIComponent(url)}&type=mp4`, {
         responseType: 'arraybuffer',
     });
 
