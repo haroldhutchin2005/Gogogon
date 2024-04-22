@@ -5,6 +5,7 @@ const FormData = require('form-data');
 const fs = require('fs');
 const path = require('path');
 
+// Read cookies from cookies.txt file
 const cookies = fs.readFileSync('cookies.txt', 'utf8').trim();
 
 async function getYoutubeTitle(link) {
@@ -31,40 +32,6 @@ async function getYoutubeTitle(link) {
     }
 }
 
-async function getTikTokVideo(link) {
-    const response = await axios.post(`https://www.tikwm.com/api/`, {
-        url: link
-    });
-
-    const data = response.data.data;
-    const videoStream = await axios({
-        method: 'get',
-        url: data.play,
-        responseType: 'stream'
-    }).then(res => res.data);
-
-    const cleanTitle = data.title.replace(/[^\w\s]/gi, ''); // Remove symbols from title
-    const fileName = `TikTok-${cleanTitle}-${Date.now()}.mp4`;
-    const filePath = path.join(__dirname, fileName);
-    const videoFile = fs.createWriteStream(filePath);
-
-    videoStream.pipe(videoFile);
-
-    return new Promise((resolve, reject) => {
-        videoFile.on('finish', () => {
-            videoFile.close(() => {
-                console.log('Downloaded TikTok video file.');
-                resolve({
-                    filePath,
-                    title: cleanTitle
-                });
-            });
-        });
-
-        videoFile.on('error', reject);
-    });
-}
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -76,53 +43,31 @@ const libraryPath = path.join(__dirname, 'library.json');
 
 app.get('/api/jonell', async (req, res) => {
     try {
-        const { url } = req.query;
-        let videoTitle;
-        let finalUrl;
+        const { url: videoUrl } = req.query;
 
-        if (/https:\/\/www\.tiktok\.com\//.test(url) || /https:\/\/vt\.tiktok\.com\//.test(url)) {
-            const { filePath, title } = await getTikTokVideo(url);
-            videoTitle = title;
-            const instance = axios.create({
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                },
-                baseURL: 'https://www.cjoint.com/',
-            });
+        const videoTitle = await getYoutubeTitle(videoUrl);
+        const instance = axios.create({
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            },
+            baseURL: 'https://www.cjoint.com/',
+        });
 
-            const uploadUrl = await getUploadUrl(instance);
-            const outputPath = path.join(__dirname, `${videoTitle}.mp4`);
+        const uploadUrl = await getUploadUrl(instance);
+        const outputPath = path.join(__dirname, `${videoTitle}.m4a`);
 
-            fs.renameSync(filePath, outputPath);
+        await downloadFile(videoUrl, outputPath);
 
-            const uploadResponse = await uploadFile(outputPath, uploadUrl, instance);
-            const cjointLink = await getCjointLink(uploadResponse);
-            finalUrl = await getFinalUrl(cjointLink);
-        } else {
-            videoTitle = await getYoutubeTitle(url);
-            const instance = axios.create({
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                },
-                baseURL: 'https://www.cjoint.com/',
-            });
-
-            const uploadUrl = await getUploadUrl(instance);
-            const outputPath = path.join(__dirname, `${videoTitle}.m4a`);
-
-            await downloadFile(url, outputPath);
-
-            const uploadResponse = await uploadFile(outputPath, uploadUrl, instance);
-            const cjointLink = await getCjointLink(uploadResponse);
-            finalUrl = await getFinalUrl(cjointLink);
-        }
+        const uploadResponse = await uploadFile(outputPath, uploadUrl, instance);
+        const cjointLink = await getCjointLink(uploadResponse);
+        const finalUrl = await getFinalUrl(cjointLink);
 
         const jsonResponse = {
             Successfully: {
                 url: finalUrl,
-                src: `${videoTitle}.mp4`,
+                src: `${videoTitle}.m4a`,
                 title: videoTitle,
-                ytLink: url,
+                ytLink: videoUrl,
                 status: 'Success'
             }
         };
@@ -131,6 +76,13 @@ app.get('/api/jonell', async (req, res) => {
 
         res.json(jsonResponse);
 
+        fs.unlink(outputPath, (err) => {
+            if (err) {
+                console.error('Error deleting file:', err);
+            } else {
+                console.log('File deleted successfully');
+            }
+        });
     } catch (error) {
         console.error('Error processing video:', error);
         res.status(500).send('Error processing video');
@@ -204,7 +156,7 @@ async function getFinalUrl(cjointLink) {
         const htmlResponse = await instance.get('/');
         const html$ = cheerio.load(htmlResponse.data);
         const shareUrl = html$('.share_url a').attr('href');
-        console.log('Share URL:', shareUrl);  
+        console.log('Share URL:', shareUrl);  // Log the extracted share URL
         const finalUrl = `https://www.cjoint.com${shareUrl.split('"')[0]}`;
         return finalUrl;
     } catch (error) {
