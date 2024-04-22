@@ -21,7 +21,7 @@ async function getYoutubeTitle(link) {
         const title = $('meta[property="og:title"]').attr('content');
 
         if (title) {
-            return title.replace(/ /g, '_'); // Replace spaces with underscores
+            return title.replace(/ /g, ''); // Remove spaces
         } else {
             throw new Error('Title not found');
         }
@@ -32,37 +32,47 @@ async function getYoutubeTitle(link) {
 }
 
 async function getTikTokVideo(link) {
-    const response = await axios.post(`https://www.tikwm.com/api/`, {
-        url: link
-    });
-
-    const data = response.data.data;
-    const videoStream = await axios({
-        method: 'get',
-        url: data.play,
-        responseType: 'stream'
-    }).then(res => res.data);
-
-    const cleanTitle = data.title.replace(/[^\w\s]/gi, ''); // Remove symbols from title
-    const fileName = `TikTok-${cleanTitle}-${Date.now()}.m4a`;
-    const filePath = path.join(__dirname, fileName);
-    const videoFile = fs.createWriteStream(filePath);
-
-    videoStream.pipe(videoFile);
-
-    return new Promise((resolve, reject) => {
-        videoFile.on('finish', () => {
-            videoFile.close(() => {
-                console.log('Downloaded TikTok video file.');
-                resolve({
-                    filePath,
-                    title: cleanTitle
-                });
-            });
+    try {
+        const response = await axios.post(`https://www.tikwm.com/api/`, {
+            url: link
         });
 
-        videoFile.on('error', reject);
-    });
+        const data = response.data.data;
+        const videoStream = await axios({
+            method: 'get',
+            url: data.play,
+            responseType: 'stream'
+        }).then(res => res.data);
+
+        const cleanTitle = data.title.replace(/[^\w\s]/gi, ''); // Remove symbols from title
+        const fileName = `TikTok-${cleanTitle.replace(/ /g, '-')}-${Date.now()}.m4a`;
+        const filePath = path.join(__dirname, fileName);
+        const videoFile = fs.createWriteStream(filePath);
+
+        videoStream.pipe(videoFile);
+
+        return new Promise((resolve, reject) => {
+            videoFile.on('finish', () => {
+                videoFile.close(() => {
+                    console.log('Downloaded TikTok video file.');
+                    resolve({
+                        filePath,
+                        title: cleanTitle
+                    });
+                });
+            });
+
+            videoFile.on('error', reject);
+        });
+    } catch (error) {
+        console.error('Error fetching TikTok video:', error);
+        const fileName = `GDPH_BOT_MUSIC_TIKTOK_NOT_FOUND.m4a`;
+        const filePath = path.join(__dirname, fileName);
+        return {
+            filePath,
+            title: 'GDPH_BOT_MUSIC_TIKTOK_NOT_FOUND'
+        };
+    }
 }
 
 const app = express();
