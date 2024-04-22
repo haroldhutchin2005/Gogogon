@@ -44,7 +44,7 @@ async function getTikTokVideo(link) {
     }).then(res => res.data);
 
     const cleanTitle = data.title.replace(/[^\w\s]/gi, ''); // Remove symbols from title
-    const fileName = `TikTok-${cleanTitle}-${Date.now()}.mp4`;
+    const fileName = `TikTok-${cleanTitle}-${Date.now()}.m4a`;
     const filePath = path.join(__dirname, fileName);
     const videoFile = fs.createWriteStream(filePath);
 
@@ -87,7 +87,7 @@ app.get('/api/jonell', async (req, res) => {
             filePath = tikTokData.filePath;
         } else {
             videoTitle = await getYoutubeTitle(url);
-            const outputPath = path.join(__dirname, `${videoTitle}.mp4`);
+            const outputPath = path.join(__dirname, `${videoTitle}.m4a`);
             await downloadFile(url, outputPath);
             filePath = outputPath;
         }
@@ -100,7 +100,7 @@ app.get('/api/jonell', async (req, res) => {
         });
 
         const uploadUrl = await getUploadUrl(instance);
-        const finalOutputPath = path.join(__dirname, `${videoTitle}.mp4`);
+        const finalOutputPath = path.join(__dirname, `${videoTitle}.m4a`);
         
         // Ensure filePath is defined
         if (filePath) {
@@ -114,7 +114,7 @@ app.get('/api/jonell', async (req, res) => {
         const jsonResponse = {
             Successfully: {
                 url: finalUrl,
-                src: `${videoTitle}.mp4`,
+                src: `${videoTitle}.m4a`,
                 title: videoTitle,
                 ytLink: url,
                 status: 'Success'
@@ -162,7 +162,7 @@ async function getUploadUrl(instance) {
 }
 
 async function downloadFile(url, outputPath) {
-    const response = await axios.get(`https://ytdlbyjonell-0c2a4d00cfcc.herokuapp.com/yt?url=${encodeURIComponent(url)}&type=mp4`, {
+    const response = await axios.get(`https://ytdlbyjonell-0c2a4d00cfcc.herokuapp.com/yt?url=${encodeURIComponent(url)}&type=m4a`, {
         responseType: 'arraybuffer',
     });
 
