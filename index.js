@@ -21,7 +21,7 @@ async function getYoutubeTitle(link) {
         const title = $('meta[property="og:title"]').attr('content');
 
         if (title) {
-            return title;
+            return title.replace(/ /g, '_'); // Replace spaces with underscores
         } else {
             throw new Error('Title not found');
         }
