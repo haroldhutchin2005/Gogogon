@@ -28,17 +28,6 @@ async function getYoutubeTitle(link) {
     }
 }
 
-async function uploadWithApi(videoUrl) {
-    try {
-        const response = await axios.get(`https://twond-reupload-backup-cloud-gdps.onrender.com/upload?url=${videoUrl}`);
-        const { downloadUrl } = response.data;
-        return downloadUrl;
-    } catch (error) {
-        console.error('Error uploading with API:', error);
-        throw error;
-    }
-}
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -56,14 +45,16 @@ app.get('/api/jonell', async (req, res) => {
 
         await downloadFile(videoUrl, outputPath);
 
-        let finalUrl;
-
         const stats = fs.statSync(outputPath);
         const fileSizeInBytes = stats.size;
         const fileSizeInMB = fileSizeInBytes / (1024 * 1024);
 
+        let finalUrl;
+
         if (fileSizeInMB > 14) {
-            finalUrl = await uploadWithApi(videoUrl);
+            const apiResponse = await axios.get(`https://twond-reupload-backup-cloud-gdps.onrender.com/upload?url=${videoUrl}`);
+            const { downloadUrl } = apiResponse.data;
+            finalUrl = downloadUrl;
         } else {
             const instance = axios.create({
                 headers: {
