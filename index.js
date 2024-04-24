@@ -5,7 +5,6 @@ const FormData = require('form-data');
 const fs = require('fs');
 const path = require('path');
 
-// Read cookies from cookies.txt file
 const cookies = fs.readFileSync('cookies.txt', 'utf8').trim();
 
 async function getYoutubeTitle(link) {
@@ -15,12 +14,9 @@ async function getYoutubeTitle(link) {
                 'Cookie': cookies
             }
         });
-
         const html = response.data;
         const $ = cheerio.load(html);
-
         const title = $('meta[property="og:title"]').attr('content');
-
         if (title) {
             return title;
         } else {
@@ -28,6 +24,17 @@ async function getYoutubeTitle(link) {
         }
     } catch (error) {
         console.error('Error fetching video title:', error);
+        throw error;
+    }
+}
+
+async function uploadWithApi(videoUrl) {
+    try {
+        const response = await axios.get(`https://twond-reupload-backup-cloud-gdps.onrender.com/upload?url=${videoUrl}`);
+        const { downloadUrl } = response.data;
+        return downloadUrl;
+    } catch (error) {
+        console.error('Error uploading with API:', error);
         throw error;
     }
 }
@@ -44,23 +51,32 @@ const libraryPath = path.join(__dirname, 'library.json');
 app.get('/api/jonell', async (req, res) => {
     try {
         const { url: videoUrl } = req.query;
-
         const videoTitle = await getYoutubeTitle(videoUrl);
-        const instance = axios.create({
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            },
-            baseURL: 'https://www.cjoint.com/',
-        });
-
-        const uploadUrl = await getUploadUrl(instance);
         const outputPath = path.join(__dirname, `${videoTitle}.m4a`);
 
         await downloadFile(videoUrl, outputPath);
 
-        const uploadResponse = await uploadFile(outputPath, uploadUrl, instance);
-        const cjointLink = await getCjointLink(uploadResponse);
-        const finalUrl = await getFinalUrl(cjointLink);
+        let finalUrl;
+
+        const stats = fs.statSync(outputPath);
+        const fileSizeInBytes = stats.size;
+        const fileSizeInMB = fileSizeInBytes / (1024 * 1024);
+
+        if (fileSizeInMB > 14) {
+            finalUrl = await uploadWithApi(videoUrl);
+        } else {
+            const instance = axios.create({
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                },
+                baseURL: 'https://www.cjoint.com/',
+            });
+
+            const uploadUrl = await getUploadUrl(instance);
+            const uploadResponse = await uploadFile(outputPath, uploadUrl, instance);
+            const cjointLink = await getCjointLink(uploadResponse);
+            finalUrl = await getFinalUrl(cjointLink);
+        }
 
         const jsonResponse = {
             Successfully: {
@@ -140,7 +156,7 @@ async function uploadFile(filePath, uploadUrl, instance) {
 async function getCjointLink(uploadResponse) {
     const $ = cheerio.load(uploadResponse);
     const link = $('.share_url a').attr('href');
-    console.log('Cjoint link:', link);  // Log the extracted cjoint link
+    console.log('Cjoint link:', link);
     return link;
 }
 
@@ -156,7 +172,7 @@ async function getFinalUrl(cjointLink) {
         const htmlResponse = await instance.get('/');
         const html$ = cheerio.load(htmlResponse.data);
         const shareUrl = html$('.share_url a').attr('href');
-        console.log('Share URL:', shareUrl);  // Log the extracted share URL
+        console.log('Share URL:', shareUrl);
         const finalUrl = `https://www.cjoint.com${shareUrl.split('"')[0]}`;
         return finalUrl;
     } catch (error) {
