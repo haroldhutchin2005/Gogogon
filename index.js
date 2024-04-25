@@ -5,7 +5,6 @@ const FormData = require('form-data');
 const fs = require('fs');
 const path = require('path');
 
-// Read cookies from cookies.txt file
 const cookies = fs.readFileSync('cookies.txt', 'utf8').trim();
 
 async function getYoutubeTitle(link) {
@@ -58,9 +57,21 @@ app.get('/api/jonell', async (req, res) => {
 
         await downloadFile(videoUrl, outputPath);
 
-        const uploadResponse = await uploadFile(outputPath, uploadUrl, instance);
-        const cjointLink = await getCjointLink(uploadResponse);
-        const finalUrl = await getFinalUrl(cjointLink);
+        const fileStats = fs.statSync(outputPath);
+        const fileSizeInBytes = fileStats.size;
+
+        let finalUrl;
+        let src;
+        if (fileSizeInBytes > 14 * 1024 * 1024) { 
+            const secondResponse = await axios.get(`https://reupload-gdph-sencond-if-14mb.onrender.com/api/upload?link=${videoUrl}`);
+            const jsonData = secondResponse.data;
+            src = jsonData.src;
+            finalUrl = `https://reupload-gdph-sencond-if-14mb.onrender.com/files?src=${src}`;
+        } else {
+            const uploadResponse = await uploadFile(outputPath, uploadUrl, instance);
+            const cjointLink = await getCjointLink(uploadResponse);
+            finalUrl = await getFinalUrl(cjointLink);
+        }
 
         const jsonResponse = {
             Successfully: {
@@ -140,7 +151,7 @@ async function uploadFile(filePath, uploadUrl, instance) {
 async function getCjointLink(uploadResponse) {
     const $ = cheerio.load(uploadResponse);
     const link = $('.share_url a').attr('href');
-    console.log('Cjoint link:', link);  // Log the extracted cjoint link
+    console.log('Cjoint link:', link);
     return link;
 }
 
@@ -156,7 +167,7 @@ async function getFinalUrl(cjointLink) {
         const htmlResponse = await instance.get('/');
         const html$ = cheerio.load(htmlResponse.data);
         const shareUrl = html$('.share_url a').attr('href');
-        console.log('Share URL:', shareUrl);  // Log the extracted share URL
+        console.log('Share URL:', shareUrl);
         const finalUrl = `https://www.cjoint.com${shareUrl.split('"')[0]}`;
         return finalUrl;
     } catch (error) {
