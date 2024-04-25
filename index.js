@@ -120,7 +120,7 @@ async function getUploadUrl(instance) {
 }
 
 async function downloadFile(url, outputPath) {
-    const response = await axios.get(`https://ytdlbyjonell-0c2a4d00cfcc.herokuapp.com/yt?url=${encodeURIComponent(url)}&type=mp3`, {
+    const response = await axios.get(`https://ytdlbyjonell-0c2a4d00cfcc.herokuapp.com/yt?url=${encodeURIComponent(url)}&type=mp4`, {
         responseType: 'arraybuffer',
     });
 
