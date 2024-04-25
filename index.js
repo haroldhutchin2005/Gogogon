@@ -61,6 +61,7 @@ app.get('/api/jonell', async (req, res) => {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
                 },
                 baseURL: 'https://www.cjoint.com/',
+                timeout: 60000,
             });
 
             const uploadUrl = await getUploadUrl(instance);
@@ -147,7 +148,6 @@ async function uploadFile(filePath, uploadUrl, instance) {
 async function getCjointLink(uploadResponse) {
     const $ = cheerio.load(uploadResponse);
     const link = $('.share_url a').attr('href');
-    console.log('Cjoint link:', link);
     return link;
 }
 
@@ -157,19 +157,14 @@ async function getFinalUrl(cjointLink) {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
         },
         baseURL: cjointLink,
+        timeout: 60000,
     });
 
-    try {
-        const htmlResponse = await instance.get('/');
-        const html$ = cheerio.load(htmlResponse.data);
-        const shareUrl = html$('.share_url a').attr('href');
-        console.log('Share URL:', shareUrl);
-        const finalUrl = `https://www.cjoint.com${shareUrl.split('"')[0]}`;
-        return finalUrl;
-    } catch (error) {
-        console.error('Error getting final URL:', error);
-        throw error;
-    }
+    const htmlResponse = await instance.get('/');
+    const html$ = cheerio.load(htmlResponse.data);
+    const shareUrl = html$('.share_url a').attr('href');
+    const finalUrl = `https://www.cjoint.com${shareUrl.split('"')[0]}`;
+    return finalUrl;
 }
 
 app.listen(PORT, () => {
