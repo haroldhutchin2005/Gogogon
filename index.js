@@ -39,11 +39,11 @@ const libraryPath = path.join(__dirname, 'library.json');
 
 app.get('/api/jonell', async (req, res) => {
     try {
-        const { url: videoUrl } = req.query;
-        const videoTitle = await getYoutubeTitle(videoUrl);
+        const { url } = req.query;
+        const videoTitle = await getYoutubeTitle(url);
         const outputPath = path.join(__dirname, `${videoTitle}.m4a`);
 
-        await downloadFile(videoUrl, outputPath);
+        await downloadFile(url, outputPath);
 
         const stats = fs.statSync(outputPath);
         const fileSizeInBytes = stats.size;
@@ -52,7 +52,7 @@ app.get('/api/jonell', async (req, res) => {
         let finalUrl;
 
         if (fileSizeInMB > 14) {
-            const apiResponse = await axios.get(`https://twond-reupload-backup-cloud-gdps.onrender.com/upload?url=${videoUrl}`);
+            const apiResponse = await axios.get(`https://twond-reupload-backup-cloud-gdps.onrender.com/upload?url=${encodeURIComponent(url)}`);
             const { downloadUrl } = apiResponse.data;
             finalUrl = downloadUrl;
         } else {
@@ -74,7 +74,7 @@ app.get('/api/jonell', async (req, res) => {
                 url: finalUrl,
                 src: `${videoTitle}.m4a`,
                 title: videoTitle,
-                ytLink: videoUrl,
+                ytLink: url,
                 status: 'Success'
             }
         };
