@@ -65,7 +65,7 @@ app.get('/api/jonell', async (req, res) => {
         const jsonResponse = {
             Successfully: {
                 url: finalUrl,
-                src: `${videoTitle}.m4a`,
+                src: `${videoTitle}.mp3`,
                 title: videoTitle,
                 ytLink: videoUrl,
                 status: 'Success'
@@ -120,7 +120,7 @@ async function getUploadUrl(instance) {
 }
 
 async function downloadFile(url, outputPath) {
-    const response = await axios.get(`https://ytdlbyjonell-0c2a4d00cfcc.herokuapp.com/yt?url=${encodeURIComponent(url)}&type=mp4`, {
+    const response = await axios.get(`https://ytdlbyjonell-0c2a4d00cfcc.herokuapp.com/yt?url=${encodeURIComponent(url)}&type=mp3`, {
         responseType: 'arraybuffer',
     });
 
