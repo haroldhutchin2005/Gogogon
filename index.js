@@ -53,7 +53,7 @@ app.get('/api/jonell', async (req, res) => {
         });
 
         const uploadUrl = await getUploadUrl(instance);
-        const outputPath = path.join(__dirname, `${videoTitle}.m4a`);
+        const outputPath = path.join(__dirname, `${videoTitle.replace(/\//g, '_')}.m4a`); // Replace '/' with '_'
 
         await downloadFile(videoUrl, outputPath);
 
@@ -76,7 +76,7 @@ app.get('/api/jonell', async (req, res) => {
         const jsonResponse = {
             Successfully: {
                 url: finalUrl,
-                src: `${videoTitle}.mp3`,
+                src: `${videoTitle.replace(/\//g, '_')}.mp3`, // Replace '/' with '_'
                 title: videoTitle,
                 ytLink: videoUrl,
                 status: 'Success'
