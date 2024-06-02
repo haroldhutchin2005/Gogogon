@@ -63,10 +63,10 @@ app.get('/api/jonell', async (req, res) => {
         let finalUrl;
         let src;
         if (fileSizeInBytes > 14 * 1024 * 1024) { 
-            const secondResponse = await axios.get(`https://reupload-gdph-sencond-if-14mb.onrender.com/api/upload?link=${videoUrl}`);
+            const secondResponse = await axios.get(`http://158.101.198.227:8114/api/upload?link=${videoUrl}`);
             const jsonData = secondResponse.data;
             src = jsonData.src;
-            finalUrl = `https://reupload-gdph-sencond-if-14mb.onrender.com/files?src=${src}`;
+            finalUrl = `http://158.101.198.227:8114/files?src=${src}`;
         } else {
             const uploadResponse = await uploadFile(outputPath, uploadUrl, instance);
             const cjointLink = await getCjointLink(uploadResponse);
