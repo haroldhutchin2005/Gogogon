@@ -131,7 +131,7 @@ async function getUploadUrl(instance) {
 }
 
 async function downloadFile(url, outputPath) {
-    const response = await axios.get(`https://ytapibyjonell.adaptable.app/yt?url=${encodeURIComponent(url)}&type=mp4`, {
+    const response = await axios.get(`http://158.101.198.227:8224/yt?url=${encodeURIComponent(url)}&type=mp4`, {
         responseType: 'arraybuffer',
     });
 
